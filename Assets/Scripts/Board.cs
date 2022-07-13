@@ -1,8 +1,8 @@
 using UnityEngine;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine.Events;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 public class Board : MonoBehaviour
 {
@@ -12,14 +12,15 @@ public class Board : MonoBehaviour
     [SerializeField] private DataType _emptyTile;
 
     public UnityEvent Match;
-    
+
     private Column[] _columns;
     private Tile[,] _board;
-    
+
     private readonly List<Tile> _selectionTiles = new List<Tile>();
-    
+
     private bool _isPaused;
-    private void Awake()
+
+    private async void Awake()
     {
         _columns = _boardSpawner.CreateBoard();
         _board = new Tile[_boardSpawner.Width, _boardSpawner.Height];
@@ -30,11 +31,13 @@ public class Board : MonoBehaviour
                 _board[x, y] = GetTile(x, y);
             }
         }
+
+        await TryMatchAsync();
     }
 
     private void OnEnable()
     {
-        if(_columns==null) return;
+        if (_columns == null) return;
 
         foreach (var column in _columns)
         {
@@ -45,16 +48,6 @@ public class Board : MonoBehaviour
         }
     }
 
-    private async void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.W))
-        {
-            _isPaused = true;
-            await ShiftDown();
-            _isPaused = false;
-        }
-    }
-
     private async Task ShiftDown()
     {
         List<Task> tasks = new List<Task>();
@@ -62,6 +55,7 @@ public class Board : MonoBehaviour
         {
             tasks.Add(column.ShiftDown(_emptyTile));
         }
+
         foreach (var task in tasks)
         {
             await task;
@@ -114,50 +108,56 @@ public class Board : MonoBehaviour
     {
         TileSwapper tileSwapper = new TileSwapper();
         _isPaused = true;
-        
+
         _selectionTiles[0].Deselect();
 
         await tileSwapper.SwapAsync(_selectionTiles[0], _selectionTiles[1], _swappingOverlay, _swapTweenDuration);
-        
+
         if (!await TryMatchAsync())
             await tileSwapper.SwapAsync(_selectionTiles[0], _selectionTiles[1], _swappingOverlay, _swapTweenDuration);
-        _isPaused = false;
 
+        _isPaused = false;
     }
-    private bool TheyNeighbors(Tile first,Tile second)
+
+    private bool TheyNeighbors(Tile first, Tile second)
     {
         return Mathf.Abs(first.X - second.X) == 0 && Mathf.Abs(first.Y - second.Y) == 1
                || Mathf.Abs(first.X - second.X) == 1 && Mathf.Abs(first.Y - second.Y) == 0;
     }
+
     private async Task<bool> TryMatchAsync()
     {
         var didMatch = false;
-        _isPaused = true;
         MatchFinder matchFinder = new MatchFinder();
 
         var match = matchFinder.FindBestMatch(_board);
-        while (match!=null)
+        while (match != null)
         {
             didMatch = true;
 
-            var deflateSequence = DOTween.Sequence();
-            foreach (var matchTile in match.Tiles)
-            {
-                deflateSequence.Join(matchTile.IconTransform.DOScale(Vector3.zero, _swapTweenDuration)
-                    .SetEase(Ease.InBack).OnComplete(() => matchTile.ChangeDataType(_emptyTile)));
-            }
+            await RemoveTiles(match.Tiles);
 
-            await deflateSequence.Play().AsyncWaitForCompletion();
-            
-            Match?.Invoke();
-            
-            await ShiftDown();
-            await RespawnTiles();
             match = matchFinder.FindBestMatch(_board);
         }
 
-        _isPaused = false;
         return didMatch;
+    }
+
+    private async Task RemoveTiles(IEnumerable<Tile> tiles)
+    {
+        _isPaused = true;
+        var deflateSequence = DOTween.Sequence();
+        foreach (var matchTile in tiles)
+        {
+            deflateSequence.Join(matchTile.IconTransform.DOScale(Vector3.zero, _swapTweenDuration)
+                .SetEase(Ease.InBack).OnComplete(() => matchTile.ChangeDataType(_emptyTile)));
+        }
+
+        await deflateSequence.Play().AsyncWaitForCompletion();
+        Match?.Invoke();
+        await ShiftDown();
+        await RespawnTiles();
+        _isPaused = false;
     }
 
     private async Task RespawnTiles()
@@ -179,10 +179,10 @@ public class Board : MonoBehaviour
         await inflateSequence.Play().AsyncWaitForCompletion();
     }
 
-    private Tile GetTile(int x,int y)
+    private Tile GetTile(int x, int y)
     {
-        x = Mathf.Clamp(x, 0, _boardSpawner.Width-1);
-        y = Mathf.Clamp(y, 0, _boardSpawner.Height-1);
+        x = Mathf.Clamp(x, 0, _boardSpawner.Width - 1);
+        y = Mathf.Clamp(y, 0, _boardSpawner.Height - 1);
 
         return _columns[x].Tiles[y];
     }

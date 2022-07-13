@@ -4,7 +4,7 @@ public class BoardSpawner : MonoBehaviour
 {
     [field: SerializeField] public int Width { get; private set; }
     [field: SerializeField] public int Height { get; private set; }
-    
+
     [SerializeField] private Tile _tilePrefab;
     [SerializeField] private Column _columnPrefab;
     [SerializeField] private DataType[] _dataTypes;

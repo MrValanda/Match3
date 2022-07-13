@@ -1,5 +1,5 @@
-using System.Threading.Tasks;
 using UnityEngine;
+using System.Threading.Tasks;
 
 public class Column : MonoBehaviour
 {
@@ -24,9 +24,9 @@ public class Column : MonoBehaviour
         {
             for (int j = i - 1; j >= 0; j--)
             {
-                if (Tiles[i].DataType.Id==emptyTile.Id)
+                if (Tiles[i].DataType.Id == emptyTile.Id)
                 {
-                    await tileSwapper.SwapAsync(Tiles[i], Tiles[j], transform,_shiftDownTweenDuration,
+                    await tileSwapper.SwapAsync(Tiles[i], Tiles[j], transform, _shiftDownTweenDuration,
                         Tiles[i].DataType != Tiles[j].DataType);
                 }
             }
