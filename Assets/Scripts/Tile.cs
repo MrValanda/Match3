@@ -42,7 +42,7 @@ public class Tile : MonoBehaviour
 
     public void ChangeDataType(DataType dataType)
     {
-        if (DataType == null) return;
+        if (dataType == null) return;
 
         DataType = dataType;
         _icon.sprite = DataType.Icon;
